@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const http = require("http");
 const { Server } = require("socket.io");
-
+const session = require("express-session");
 const mainRouter = require("./routes/main.router");
 
 
@@ -123,7 +123,33 @@ function startServer(){
     .then(() => console.log("MongoDB connected!"))
     .catch((err) => console.error("Unable to connect : ", err));
 
-    app.use(cors({ origin: "*" }));//request kisi se path se aa skta h aur wo valid path jaisa treat hoga
+    // app.use(cors({ origin: "*" }));//request kisi se path se aa skta h aur wo valid path jaisa treat hoga
+   
+    const allowedOrigins = ["http://localhost:3000", "https://main.d1baxxsfz83jk1.amplifyapp.com"];
+
+    const corsOptions = {
+      origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
+      credentials: true,
+    };
+    app.use(cors(corsOptions));
+
+    app.use(session({
+      secret: process.env.JWT_SECRET_KEY,  
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+          secure: true,
+          sameSite: "None",
+          httpOnly: true
+      }
+  }));
+  
     
     app.use("/" , mainRouter);
    
@@ -140,7 +166,7 @@ function startServer(){
        },
     });
 
-    io.on("connections" , (socket)=>{
+    io.on("connection" , (socket)=>{
       socket.on("joinRoom" , (userID)=>{
         user = userID;
         console.log("=====");
